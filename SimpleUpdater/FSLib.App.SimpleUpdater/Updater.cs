@@ -510,11 +510,11 @@ namespace FSLib.App.SimpleUpdater
 					Trace.TraceInformation("已开启自动结束所有进程。正在结束进程。");
 					foreach (var s in closeApplication)
 					{
-						if (s.HasExited)
-						{
-							Trace.TraceInformation($"进程 PID={s.Id} 已经提前退出。");
-						}
-						else
+						//if (s.HasExited)  //某些情况下，判断可能无效，改为在异常捕获中判断
+						//{
+						//	Trace.TraceInformation($"进程 PID={s.Id} 已经提前退出。");
+						//}
+						//else
 						{
 							try
 							{
@@ -523,9 +523,16 @@ namespace FSLib.App.SimpleUpdater
 							}
 							catch (Exception ex)
 							{
-								Trace.TraceError($"进程【{s.Id}】结束失败：{ex.Message}");
+								if (s.HasExited)
+								{
+									Trace.TraceInformation($"进程 PID={s.Id} 已经提前退出。");
+								}
+                                else
+								{
+									Trace.TraceError($"进程【{s.Id}】结束失败：{ex.Message}");
 
-								return false;
+                                    return false;
+								}
 							}
 						}
 					}
