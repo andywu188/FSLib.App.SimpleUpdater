@@ -940,7 +940,33 @@ namespace FSLib.App.SimpleUpdater
 		/// <remarks></remarks>
 		public FileInstaller FileInstaller => _installer ?? (_installer = new FileInstaller());
 
-
+		/// <summary>
+        /// Together with the AcceptAllCertifications method right
+        /// below this causes to bypass errors caused by SLL-Errors.
+        /// </summary>
+        public static void IgnoreBadCertificates()
+        {
+			System.Net.ServicePointManager.ServerCertificateValidationCallback += AcceptAllCertifications;
+        }
+        
+        /// <summary>
+        /// In Short: the Method solves the Problem of broken Certificates.
+        /// Sometime when requesting Data and the sending Webserverconnection
+        /// is based on a SSL Connection, an Error is caused by Servers whoes
+        /// Certificate(s) have Errors. Like when the Cert is out of date
+        /// and much more... So at this point when calling the method,
+        /// this behaviour is prevented
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="certification"></param>
+        /// <param name="chain"></param>
+        /// <param name="sslPolicyErrors"></param>
+        /// <returns>true</returns>
+        private static bool AcceptAllCertifications(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certification, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors sslPolicyErrors)
+        {
+            return true;
+        }
+        
 		//BMK 更新主函数 (正式更新)
 		/// <summary>
 		/// 运行更新进程(主更新进程)
@@ -949,10 +975,15 @@ namespace FSLib.App.SimpleUpdater
 		/// <exception cref="System.Exception"></exception>
 		void UpdateInternal(object sender, RunworkEventArgs e)
 		{
+            //解决自签名证书下载失败的问题
+            System.Net.ServicePointManager.ServerCertificateValidationCallback += AcceptAllCertifications;
+            
 			DownloadUpdateInfoInternal(sender, e);
 
 			//下载升级包。下载完成的时候校验也就完成了
-			if (!DownloadPackages(e)) return;
+            var downloadResult = DownloadPackages(e);
+            System.Net.ServicePointManager.ServerCertificateValidationCallback -= AcceptAllCertifications;
+			if (!downloadResult) return;
 
 			//解压缩升级包
 			ExtractPackage(e);
